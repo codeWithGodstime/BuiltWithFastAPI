@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scalable Chat Room</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #6e8efb, #a777e3);
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            justify-content: space-evenly;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            /* max-width: 900px; */
+            flex-grow: 1;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            height: 90vh;
+        }
+
+        .header {
+            background: #6c63ff;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .online-count {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+
+        .chat-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .users-sidebar {
+            width: 200px;
+            background: #f5f7ff;
+            padding: 15px;
+            border-right: 1px solid #e0e0e0;
+            overflow-y: auto;
+        }
+
+        .users-sidebar h3 {
+            margin-bottom: 15px;
+            color: #6c63ff;
+            font-size: 1rem;
+        }
+
+        .user-list {
+            list-style: none;
+        }
+
+        .user-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 5px;
+            border-radius: 6px;
+            margin-bottom: 5px;
+        }
+
+        .user-item:hover {
+            background: #e9e9e9;
+        }
+
+        .user-status {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #4caf50;
+            margin-right: 10px;
+        }
+
+        .chat-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .messages-container {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #fff;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            /* max-width: 80%; */
+            width: fit-content;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .notifications {
+            text-align: center;
+            color: #888;
+            font-size: 0.9rem;
+            margin: 10px 0;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.self {
+            margin-left: auto;
+            text-align: right;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .message-sender {
+            font-weight: 600;
+            color: #6c63ff;
+            margin-right: 10px;
+        }
+
+        .message-time {
+            font-size: 0.7rem;
+            color: #888;
+        }
+
+        .message-content {
+            background: #f0f2ff;
+            padding: 12px 15px;
+            border-radius: 18px;
+            display: inline-block;
+            word-break: break-word;
+        }
+
+        .message.self .message-content {
+            background: #6c63ff;
+            color: white;
+        }
+
+        .reactions {
+            display: flex;
+            margin-top: 5px;
+            flex-wrap: wrap;
+        }
+
+        .reaction {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid #ddd;
+            border-radius: 15px;
+            padding: 3px 8px;
+            margin-right: 5px;
+            margin-bottom: 5px;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .reaction:hover {
+            background: #f0f2ff;
+            transform: scale(1.05);
+        }
+
+        .reaction-count {
+            margin-left: 5px;
+            font-weight: 600;
+        }
+
+        .input-area {
+            padding: 15px 20px;
+            background: #f5f7ff;
+            display: flex;
+            align-items: center;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .message-input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 24px;
+            outline: none;
+            font-size: 1rem;
+            transition: border 0.3s;
+        }
+
+        .message-input:focus {
+            border-color: #6c63ff;
+        }
+
+        .send-button {
+            background: #6c63ff;
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-left: 10px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background 0.3s;
+        }
+
+        .send-button:hover {
+            background: #554fd2;
+        }
+
+        .reaction-picker {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 24px;
+            padding: 5px;
+            margin-right: 10px;
+            display: flex;
+        }
+
+        .reaction-option {
+            font-size: 1.2rem;
+            margin: 0 5px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .reaction-option:hover {
+            transform: scale(1.3);
+        }
+
+        .login-container {
+            padding: 30px;
+            text-align: center;
+        }
+
+        .login-form {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .login-form h2 {
+            margin-bottom: 20px;
+            color: #6c63ff;
+        }
+
+        .username-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+            transition: border 0.3s;
+        }
+
+        .username-input:focus {
+            border-color: #6c63ff;
+            outline: none;
+        }
+
+        .join-button {
+            background: #6c63ff;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .join-button:hover {
+            background: #554fd2;
+        }
+
+        @media (max-width: 768px) {
+            .chat-container {
+                flex-direction: column;
+            }
+
+            .users-sidebar {
+                width: 100%;
+                max-height: 120px;
+                border-right: none;
+                border-bottom: 1px solid #e0e0e0;
+            }
+
+            .user-list {
+                display: flex;
+                overflow-x: auto;
+            }
+
+            .user-item {
+                margin-right: 15px;
+                flex-shrink: 0;
+            }
+
+            .message {
+                max-width: 90%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div style="display: flex; width: 100%;">
+        <div class="loginform">
+            <div class="login-container">
+                <form class="login-form">
+                    <h2>Join the Chat Room</h2>
+                    <input type="text" class="username-input" placeholder="Enter your username" required>
+                    <button type="submit" class="join-button">Join</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="header">
+                <h1>Scalable Chat Room</h1>
+                <p>Chat with just your username - reactions supported</p>
+                <div class="online-count">
+                    <i class="fas fa-users"></i> <span id="onlineCount">143</span> online
+                </div>
+            </div>
+
+            <div class="chat-container">
+                <div class="users-sidebar">
+                    <h3>Online Users</h3>
+                    <ul class="user-list" id="userList">
+                        <li class="user-item">
+                            <div class="user-status"></div>
+                            <span>john_doe</span>
+                        </li>
+                        <li class="user-item">
+                            <div class="user-status"></div>
+                            <span>sarah_smith</span>
+                        </li>
+                        <li class="user-item">
+                            <div class="user-status"></div>
+                            <span>chat_master</span>
+                        </li>
+                        <li class="user-item">
+                            <div class="user-status"></div>
+                            <span>tech_guru</span>
+                        </li>
+                        <li class="user-item">
+                            <div class="user-status"></div>
+                            <span>coding_ninja</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="chat-main">
+                    <div class="messages-container" id="messagesContainer">
+                        <!-- <div class="message">
+                            <div class="message-header">
+                                <span class="message-sender">sarah_smith</span>
+                                <span class="message-time">10:24 AM</span>
+                            </div>
+                            <div class="message-content">
+                                Hey everyone! How's it going?
+                            </div>
+                            <div class="reactions">
+                                <div class="reaction">
+                                    👍 <span class="reaction-count">3</span>
+                                </div>
+                                <div class="reaction">
+                                    😄 <span class="reaction-count">1</span>
+                                </div>
+                            </div>
+                        </div> -->
+
+                        <!-- <div class="message self">
+                            <div class="message-header">
+                                <span class="message-sender">You</span>
+                                <span class="message-time">10:25 AM</span>
+                            </div>
+                            <div class="message-content">
+                                Pretty good! Just working on this new chat app. It's going to scale to millions of
+                                users!
+                            </div>
+                            <div class="reactions">
+                                <div class="reaction">
+                                    🚀 <span class="reaction-count">2</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="message">
+                            <div class="message-header">
+                                <span class="message-sender">tech_guru</span>
+                                <span class="message-time">10:26 AM</span>
+                            </div>
+                            <div class="message-content">
+                                That's awesome! What backend are you using for scaling?
+                            </div>
+                        </div> -->
+
+                        <!-- <div class="message">
+                            <div class="message-header">
+                                <span class="message-sender">coding_ninja</span>
+                                <span class="message-time">10:27 AM</span>
+                            </div>
+                            <div class="message-content">
+                                I hope it has reaction features. That's a must-have for modern chat apps!
+                            </div>
+                            <div class="reactions">
+                                <div class="reaction">
+                                    ❤️ <span class="reaction-count">4</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="notifications">
+                            <em>another_user has joined the chat</em>
+                        </div> -->
+                    </div>
+
+                    <div class="input-area">
+                        <div class="reaction-picker">
+                            <div class="reaction-option">👍</div>
+                            <div class="reaction-option">❤️</div>
+                            <div class="reaction-option">😄</div>
+                            <div class="reaction-option">🎉</div>
+                            <div class="reaction-option">🚀</div>
+                        </div>
+                        <input type="text" class="message-input" placeholder="Type your message here...">
+                        <button class="send-button">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const messagesContainer = document.getElementById('messagesContainer');
+            const messageInput = document.querySelector('.message-input');
+            const sendButton = document.querySelector('.send-button');
+            const reactionOptions = document.querySelectorAll('.reaction-option');
+
+            // connect to websocket
+            const socket = new WebSocket('ws://localhost:8000/ws/');
+            console.log("WebSocket object: ", socket);
+
+            // Connection opened
+            socket.addEventListener("open", (event) => {
+                console.log("Connected to WebSocket server.");
+            });
+
+            // Listen for messages
+            socket.addEventListener("message", (event) => {
+                const data = JSON.parse(event.data);
+
+                switch (data.type) {
+                    case "user_joined":
+                        // increment online user count
+                        const onlineCountElem = document.getElementById("onlineCount");
+                        let currentCount = parseInt(onlineCountElem.textContent);
+                        onlineCountElem.textContent = currentCount + 1;
+
+                        const messagesContainer = document.getElementById('messagesContainer');
+                        const notificationDiv = document.createElement('div');
+                        notificationDiv.className = 'notifications';
+                        notificationDiv.innerHTML = `<em>${data.username} has joined the chat</em>`;
+                        messagesContainer.appendChild(notificationDiv);
+                        break;
+
+                    case "user_disconnected":
+                        // decrement online user count
+                        const onlineCountElem2 = document.getElementById("onlineCount");
+                        let currentCount2 = parseInt(onlineCountElem2.textContent);
+                        onlineCountElem2.textContent = currentCount2 - 1;
+                        break;
+                    case "message":
+                        data.from_self ? addMessage('YOU', data.message, true) : addMessage(data.username, data.message, false)
+                        break;
+
+                    case "react":
+                        break;
+
+
+                    default:
+                        break;
+                }
+                console.log("Message from server ", event.data);
+            });
+
+            // Function to add a new message
+            function addMessage(sender, content, isSelf = false) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = isSelf ? 'message self' : 'message';
+
+                const now = new Date();
+                const timeString = now.getHours() + ':' + String(now.getMinutes()).padStart(2, '0');
+
+                messageDiv.innerHTML = `
+                    <div class="message-header">
+                        <span class="message-sender">${isSelf ? 'You' : sender}</span>
+                        <span class="message-time">${timeString}</span>
+                    </div>
+                    <div class="message-content">
+                        ${content}
+                    </div>
+                    <div class="reactions"></div>
+                `;
+
+                messagesContainer.appendChild(messageDiv);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+                // Add reaction functionality to the new message
+                const reactionsDiv = messageDiv.querySelector('.reactions');
+                reactionOptions.forEach(option => {
+                    option.addEventListener('click', function () {
+                        addReaction(reactionsDiv, option.textContent);
+                    });
+                });
+            }
+
+            // Function to add a reaction
+            function addReaction(reactionsDiv, reaction) {
+                let reactionExists = false;
+
+                // Check if reaction already exists
+                reactionsDiv.querySelectorAll('.reaction').forEach(existingReaction => {
+                    if (existingReaction.textContent.includes(reaction)) {
+                        reactionExists = true;
+                        const countSpan = existingReaction.querySelector('.reaction-count');
+                        let count = parseInt(countSpan.textContent);
+                        count++;
+                        countSpan.textContent = count;
+                    }
+                });
+
+                // If reaction doesn't exist, create it
+                if (!reactionExists) {
+                    const reactionDiv = document.createElement('div');
+                    reactionDiv.className = 'reaction';
+                    reactionDiv.innerHTML = `${reaction} <span class="reaction-count">1</span>`;
+                    reactionsDiv.appendChild(reactionDiv);
+
+                    // Add click event to the new reaction
+                    reactionDiv.addEventListener('click', function () {
+                        const countSpan = this.querySelector('.reaction-count');
+                        let count = parseInt(countSpan.textContent);
+                        count++;
+                        countSpan.textContent = count;
+                    });
+                }
+            }
+
+            // Send message on button click
+            sendButton.addEventListener('click', function () {
+                if (messageInput.value.trim() !== '') {
+                    // addMessage('You', messageInput.value, true);
+                    socket.send(JSON.stringify({ type: 'message', "username": window.myUsername, message: messageInput.value }));
+                    messageInput.value = '';
+
+                    // // Simulate a response after a short delay
+                    // setTimeout(() => {
+                    //     const responses = [
+                    //         "Interesting point!",
+                    //         "I agree with that.",
+                    //         "Can you tell me more?",
+                    //         "Thanks for sharing!",
+                    //         "That's awesome! 🚀"
+                    //     ];
+                    //     const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+                    //     addMessage('Other_User', randomResponse);
+                    // }, 1000);
+                }
+            });
+
+            // Send message on Enter key
+            messageInput.addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    sendButton.click();
+                }
+            });
+
+            // Add reaction functionality to existing messages
+            document.querySelectorAll('.message .reactions').forEach(reactionsDiv => {
+                reactionOptions.forEach(option => {
+                    option.addEventListener('click', function () {
+                        addReaction(reactionsDiv, option.textContent);
+                    });
+                });
+            });
+
+            document.querySelector('.login-form').addEventListener('submit', function (e) {
+                e.preventDefault();
+                const username = document.querySelector('.username-input').value.trim();
+                if (username) {
+                    // Here you would normally send the username to the server
+                    document.querySelector('.loginform').style.display = 'none';
+                    document.querySelector('.container').style.display = 'flex';
+                    
+                    window.myUsername = username; // Store username globally
+
+                    // Notify server of new user
+                    socket.send(JSON.stringify({ type: 'join', username: username }));
+                }
+            });
+
+            // // Initialize with some demo messages
+            // setTimeout(() => {
+            //     addMessage('demo_user', 'This chat room is looking great! How are you handling scaling?');
+            // }, 1500);
+
+            // setTimeout(() => {
+            //     addMessage('another_user', 'WebSockets with load balancing?', false);
+            // }, 3000);
+        });
+    </script>
+</body>
+
+</html>
