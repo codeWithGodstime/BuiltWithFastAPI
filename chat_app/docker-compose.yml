@@ -14,6 +14,8 @@ services:
     networks:
       - app_network
     restart: always
+    volumes:
+      - .:/code/app 
 
   rabbitmq:
     container_name: "chat-rabbitmq"
@@ -30,3 +32,4 @@ services:
 networks:
   app_network:
     driver: bridge
+  

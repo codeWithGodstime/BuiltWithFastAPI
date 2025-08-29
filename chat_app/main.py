@@ -1,6 +1,7 @@
 # chat room  you can join with your username
 import aio_pika
 import asyncio
+import json
 import uuid
 from typing import Dict
 from contextlib import asynccontextmanager
@@ -32,11 +33,21 @@ class ConnectionManager:
             await websocket.send_json(message)
 
     async def broadcast(self, message: dict, sender_id: str | None = None):
+        print("This was called broadcast", message)
+        disconnected_users = []
         for user_id, connection in self.active_connections.items():
             payload = message.copy()
             # mark if this message was sent by the current user
-            payload["from_self"] = (user_id == sender_id)
-            await connection.send_json(payload)
+            payload["from_self"] = (user_id == payload.get('sender_id'))
+            try:
+                await connection.send_json(payload)
+            except RuntimeError as e:
+                print(f"Connection with {user_id} is no longer active. Error: {e}")
+                disconnected_users.append(user_id)
+
+        # Clean up disconnected users outside the loop
+        # for user_id in disconnected_users:
+        #     self.disconnect(user_id)
 
 
 manager = ConnectionManager()
@@ -61,38 +72,49 @@ class RabbitMQ:
         async with chat_queue.iterator() as queue_iter:
             async for message in queue_iter:
                 async with message.process():
+                    print(message.body.decode())
                     # Decode the message body and broadcast it to clients
-                    decoded_message = message.body.decode()
+                    # <-- IMPORTANT CHANGE: Decode and parse JSON
+                    decoded_message = json.loads(message.body.decode('utf-8'))
                     print(f"Received from RabbitMQ: {decoded_message}")
                     await manager.broadcast(decoded_message)
 
-@asynccontextmanager
-async def connect_to_rabbitmq(app: FastAPI):
-    # create RabbitMQ connection
-    connection = await aio_pika.connect_robust(RABBITMQ_URL)
-    channel = await connection.channel()        
 
-    # store in app.state for access in routes
+async def connect_to_rabbitmq(app: FastAPI):
+    connection = await aio_pika.connect_robust(RABBITMQ_URL)
+    channel = await connection.channel()
+
     app.state.rabbitmq_connection = connection
     app.state.rabbitmq_channel = channel
 
-    app.state.exchange = await app.state.rabbitmq_connection.declare_exchange(EXCHANGE_NAME, aio_pika.ExchangeType.FANOUT)
-    
-    app.state.rabbitmq_channel.queue_declare(queue=MESSAGE_QUEUE)
-    # app.state.rabbitmq_channel.queue_declare(queue="db")
+    # Declare exchange
+    exchange = await channel.declare_exchange(EXCHANGE_NAME, aio_pika.ExchangeType.FANOUT)
+    app.state.exchange = exchange
 
-    # to bind the queue to the exchange
-    await app.state.rabbitmq_channel.queue_bind(exchange=EXCHANGE_NAME, queue=MESSAGE_QUEUE)
+    # Declare queues and bind
+    chat_queue = await channel.declare_queue(MESSAGE_QUEUE, durable=True)
+    await chat_queue.bind(exchange)
 
-    app.state.consumer_task = asyncio.create_task(RabbitMQ.consume_messages())
+    # Optionally, db queue
+    # db_queue = await channel.declare_queue("db", durable=True)
+    # await db_queue.bind(exchange)
 
-    yield
+    # Start consumer task
+    async def consumer_wrapper():
+        try:
+            await RabbitMQ.consume_messages(app)
+        except asyncio.CancelledError:
+            pass
 
-    # cleanup on shutdown
+    app.state.consumer_task = asyncio.create_task(consumer_wrapper())
+
+    yield  # for lifespan context
+
+    # Shutdown
     app.state.consumer_task.cancel()
     await channel.close()
     await connection.close()
-
+ 
 
 app = FastAPI(lifespan=connect_to_rabbitmq)
 
@@ -110,7 +132,7 @@ async def websocket_endpoint(websocket: WebSocket):
     user_id = str(uuid.uuid4()) # new unique id for each connection
     await manager.connect(websocket, user_id)
 
-    channel = app.state.rabbitmq_channel
+    exchange: aio_pika.Exchange = app.state.exchange
 
     try:
         while True:
@@ -132,12 +154,11 @@ async def websocket_endpoint(websocket: WebSocket):
                     "message": f"{username} joined the chat"
                 }
 
-                channel.basic_publish(
-                    exchange=EXCHANGE_NAME,
-                    routing_key="",
-                    body=aio_pika.Message(body=str(payload).encode())
+                await exchange.publish(
+                    aio_pika.Message(body=json.dumps(payload).encode()),
+                    routing_key=""
                 )
-
+  
             elif type_ == "message":
                 message = data.get("message")
 
@@ -145,22 +166,23 @@ async def websocket_endpoint(websocket: WebSocket):
                     "type": "message",
                     "user_id": user_id,
                     "username": username,
-                    "message": message
+                    "message": message,
+                    "sender_id": user_id
                 }
-                channel.basic_publish(
-                    exchange=EXCHANGE_NAME,
+                
+                await exchange.publish(
+                    aio_pika.Message(body=json.dumps(payload).encode()),                    
                     routing_key="",
-                    body=aio_pika.Message(body=str(payload).encode())
                 )
 
             else:
                 error_payload = {"error": "invalid message type"}
-                channel.basic_publish(
-                    exchange=EXCHANGE_NAME,
+                await exchange.publish(
+                    aio_pika.Message(body=json.dumps(error_payload).encode()),
                     routing_key="",
-                    body=aio_pika.Message(body=str(error_payload).encode())
                 )
-
+ 
     except WebSocketDisconnect:
         manager.disconnect(user_id)
         await manager.broadcast({"type:": "notifications", "message": f"{username} left the chat", "type": "user_left", "user_id": user_id, "username": username})
+  
