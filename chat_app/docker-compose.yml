@@ -1,0 +1,32 @@
+version: "3"
+
+services:
+  web:
+    container_name: "chat-web"
+    build: .
+    ports:
+      - "8000:8000"
+    depends_on:
+      - rabbitmq
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+    networks:
+      - app_network
+    restart: always
+
+  rabbitmq:
+    container_name: "chat-rabbitmq"
+    image: "rabbitmq:3.12-management-alpine"
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    hostname: rabbitmq
+    networks:
+      - app_network
+    restart: always
+
+
+networks:
+  app_network:
+    driver: bridge
