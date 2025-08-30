@@ -1,5 +1,3 @@
-version: "3"
-
 services:
   web:
     container_name: "chat-web"
@@ -8,6 +6,7 @@ services:
       - "8000:8000"
     depends_on:
       - rabbitmq
+      # - db
     environment:
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_PORT=5672
@@ -15,7 +14,7 @@ services:
       - app_network
     restart: always
     volumes:
-      - .:/code/app 
+      - .:/code/app
 
   rabbitmq:
     container_name: "chat-rabbitmq"
@@ -27,7 +26,18 @@ services:
     networks:
       - app_network
     restart: always
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s      # how often to run check
+      timeout: 5s        # time allowed for the check
+      retries: 5         # how many failures before unhealthy
+      start_period: 10s  # grace period before starting checks
 
+  # db:
+  #   container_name: "chat-mongo"
+  #   image: "mongo:6.0"
+  #   ports:
+  #     - "27017:27017"
 
 networks:
   app_network:

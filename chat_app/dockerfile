@@ -1,13 +1,24 @@
+# Use a Python base image.
 FROM python:slim-trixie
 
+# Set the working directory inside the container.
 WORKDIR /code
 
+# Copy the requirements file and install dependencies.
 COPY requirements.txt /code/requirements.txt
-
 RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 
+# Copy the wait script and make it executable.
+COPY ./wait-for-rabbitmq.sh /code/wait-for-rabbitmq.sh
+RUN chmod +x /code/wait-for-rabbitmq.sh
+
+# Copy the rest of the application code.
 COPY . /code/app
 
+# Set the working directory for the application.
 WORKDIR /code/app
 
-ENTRYPOINT ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# The ENTRYPOINT runs the wait script. This script will then execute the main command.
+# The CMD provides the default arguments for the ENTRYPOINT, which is your application's start command.
+# ENTRYPOINT ["/code/wait-for-rabbitmq.sh"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

@@ -45,9 +45,9 @@ class ConnectionManager:
                 print(f"Connection with {user_id} is no longer active. Error: {e}")
                 disconnected_users.append(user_id)
 
-        # Clean up disconnected users outside the loop
-        # for user_id in disconnected_users:
-        #     self.disconnect(user_id)
+        #Clean up disconnected users outside the loop
+        for user_id in disconnected_users:
+            self.disconnect(user_id)
 
 
 manager = ConnectionManager()
