@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Spill — Hyperlocal Stories</title>
+  <style>
+    :root {
+      --bg: #0b0e12;
+      --panel: #121821;
+      --panel-2: #0e141b;
+      --text: #e6edf3;
+      --text-dim: #97a3af;
+      --accent: #4f8cff;
+      --accent-2: #7aa2ff;
+      --success: #2ecc71;
+      --danger: #ff5d5d;
+      --warning: #f0b429;
+      --radius: 16px;
+      --shadow: 0 10px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.02);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; background: radial-gradient(1200px 800px at 80% -10%, #132134 0, rgba(19,33,52,0) 60%), var(--bg); 
+      color: var(--text); font: 15px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+    }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+
+    header {
+      display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .logo {
+      width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      box-shadow: var(--shadow);
+      display: grid; place-items: center; font-weight: 900; color: white;
+    }
+    .title { font-size: 22px; font-weight: 800; letter-spacing: .3px; }
+    .subtitle { color: var(--text-dim); font-size: 13px; }
+
+    .grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: 20px; }
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+    .card { background: linear-gradient(180deg, var(--panel), var(--panel-2)); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid rgba(255,255,255,.05); }
+    .card .hd { padding: 16px 18px; border-bottom: 1px solid rgba(255,255,255,.06); font-weight: 700; }
+    .card .bd { padding: 16px 18px; }
+
+    .row { display: grid; gap: 12px; }
+    label { font-size: 13px; color: var(--text-dim); }
+    input[type="text"], textarea, select { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,.08); background: #0c1219; color: var(--text); outline: none; }
+    textarea { min-height: 110px; resize: vertical; }
+    .coords { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    .btn { appearance: none; border: none; background: var(--accent); color: white; padding: 11px 14px; border-radius: 12px; font-weight: 700; cursor: pointer; box-shadow: var(--shadow); }
+    .btn:hover { filter: brightness(1.05); }
+    .btn.ghost { background: transparent; border: 1px solid rgba(255,255,255,.12); color: var(--text); }
+    .btn.block { width: 100%; }
+
+    .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+    .pill { padding: 6px 10px; border-radius: 999px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08); color: var(--text-dim); font-size: 12px; }
+
+    .list { display: grid; gap: 12px; }
+    .story { background: #0b1118; border: 1px solid rgba(255,255,255,.06); border-radius: 14px; padding: 14px; display: grid; gap: 8px; }
+    .story .meta { display: flex; gap: 10px; align-items: center; color: var(--text-dim); font-size: 12px; }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); display: inline-block; }
+
+    .empty { padding: 30px; text-align: center; color: var(--text-dim); border: 1px dashed rgba(255,255,255,.08); border-radius: 14px; }
+
+    .footer { margin-top: 28px; color: var(--text-dim); font-size: 12px; text-align: center; }
+
+    .toast { position: fixed; right: 18px; bottom: 18px; background: #0f1722; border: 1px solid rgba(255,255,255,.08); color: var(--text); padding: 12px 14px; border-radius: 12px; box-shadow: var(--shadow); display: none; }
+
+    .badge { font-size: 11px; padding: 4px 8px; border-radius: 999px; background: rgba(79,140,255,.12); color: var(--accent-2); border: 1px solid rgba(79,140,255,.25); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">
+        <div class="logo">S</div>
+        <div>
+          <div class="title">Spill</div>
+          <div class="subtitle">Share hyperlocal stories around you</div>
+        </div>
+      </div>
+      <div class="toolbar">
+        <span id="status-pill" class="pill">Location: <em>unknown</em></span>
+        <button id="use-gps" class="btn ghost">Use my GPS</button>
+      </div>
+    </header>
+
+    <div class="grid">
+      <!-- Compose -->
+      <section class="card">
+        <div class="hd">Create a story</div>
+        <div class="bd">
+          <div class="row">
+            <label for="content">What's happening?</label>
+            <textarea id="content" placeholder="Type your story..."></textarea>
+          </div>
+          <div class="row coords" style="margin-top:12px">
+            <div>
+              <label for="lat">Latitude</label>
+              <input id="lat" type="text" placeholder="e.g. 6.5244" />
+            </div>
+            <div>
+              <label for="lng">Longitude</label>
+              <input id="lng" type="text" placeholder="e.g. 3.3792" />
+            </div>
+          </div>
+          <div class="row" style="margin-top:14px">
+            <button id="post" class="btn">Post story</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Discover -->
+      <section class="card">
+        <div class="hd">Nearby stories</div>
+        <div class="bd">
+          <div class="row" style="margin-bottom:12px">
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap">
+              <label for="radius">Radius</label>
+              <select id="radius">
+                <option value="1">1 km</option>
+                <option value="2">2 km</option>
+                <option value="5" selected>5 km</option>
+                <option value="10">10 km</option>
+                <option value="25">25 km</option>
+              </select>
+              <button id="refresh" class="btn ghost">Refresh</button>
+            </div>
+          </div>
+          <div id="list" class="list">
+            <div class="empty">No stories yet. Be the first to post something around you.</div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="footer">Built for the Spill demo — FastAPI + MongoDB + Redis GEO</div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    const $ = (s) => document.querySelector(s);
+    const statusPill = $('#status-pill');
+    const toast = $('#toast');
+    const API_URL = 'http://localhost:8000';
+
+    const state = {
+      lat: null,
+      lng: null,
+    };
+
+    function showToast(msg, type = 'info') {
+      toast.textContent = msg;
+      toast.style.display = 'block';
+      toast.style.borderColor = type === 'error' ? 'rgba(255,93,93,.4)' : 'rgba(79,140,255,.35)';
+      setTimeout(() => toast.style.display = 'none', 2200);
+    }
+
+    function setCoords(lat, lng) {
+      state.lat = lat; state.lng = lng;
+      $('#lat').value = lat?.toFixed ? lat.toFixed(6) : lat;
+      $('#lng').value = lng?.toFixed ? lng.toFixed(6) : lng;
+      statusPill.innerHTML = `Location: <span class="badge">${Number(lat).toFixed(4)}, ${Number(lng).toFixed(4)}</span>`;
+    }
+
+    function haversine(lat1, lon1, lat2, lon2) {
+      const R = 6371; // km
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat/2) ** 2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    async function postStory() {
+      const content = $('#content').value.trim();
+      const lat = parseFloat($('#lat').value);
+      const lng = parseFloat($('#lng').value);
+
+      if (!content) return showToast('Write something first.', 'error');
+      if (Number.isNaN(lat) || Number.isNaN(lng)) return showToast('Set valid coordinates.', 'error');
+
+      try {
+        const res = await fetch(`${API_URL}/stories/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content, latitude: lat, longitude: lng })
+        });
+        if (!res.ok) throw new Error('Failed to post');
+        const data = await res.json();
+        showToast('Story posted');
+        $('#content').value = '';
+        await refreshStories();
+      } catch (err) {
+        console.error(err);
+        showToast('Error posting story', 'error');
+      }
+    }
+
+    function storyItem(doc) {
+      const created = doc.created_at ? new Date(doc.created_at) : null;
+      const dist = (state.lat != null && doc.latitude != null)
+        ? haversine(state.lat, state.lng, doc.latitude, doc.longitude)
+        : null;
+      const el = document.createElement('div');
+      el.className = 'story';
+      el.innerHTML = `
+        <div>${escapeHtml(doc.content || '')}</div>
+        <div class="meta">
+          <span class="dot"></span>
+          <span>${dist != null ? dist.toFixed(2) + ' km away' : 'distance unknown'}</span>
+          <span>•</span>
+          <span>${created ? created.toLocaleString() : ''}</span>
+          <span style="margin-left:auto; color: var(--text-dim)">(${Number(doc.latitude).toFixed(4)}, ${Number(doc.longitude).toFixed(4)})</span>
+        </div>`;
+      return el;
+    }
+
+    async function refreshStories() {
+      if (state.lat == null || state.lng == null) return showToast('Set your location first', 'error');
+      const radius = $('#radius').value;
+      const url = new URL(`${API_URL}/stories/`, window.location.origin);
+      url.searchParams.set('latitude', state.lat);
+      url.searchParams.set('longitude', state.lng);
+      url.searchParams.set('radius_km', radius);
+      try {
+        const res = await fetch(url.toString());
+        if (!res.ok) throw new Error('Failed to load stories');
+        const data = await res.json();
+        const list = $('#list');
+        list.innerHTML = '';
+        const items = (data.stories || []).sort((a, b) => {
+          const da = haversine(state.lat, state.lng, a.latitude, a.longitude);
+          const db = haversine(state.lat, state.lng, b.latitude, b.longitude);
+          return da - db;
+        });
+        if (items.length === 0) {
+          list.innerHTML = '<div class="empty">Nothing nearby yet. Try increasing the radius.</div>';
+          return;
+        }
+        for (const doc of items) list.appendChild(storyItem(doc));
+      } catch (err) {
+        console.error(err);
+        showToast('Failed to load stories', 'error');
+      }
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/[&<>"]+/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    }
+
+    function getGPS() {
+      if (!navigator.geolocation) return showToast('Geolocation not supported', 'error');
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const { latitude, longitude } = pos.coords;
+          setCoords(latitude, longitude);
+          refreshStories();
+        },
+        (err) => showToast('GPS error: ' + err.message, 'error'),
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
+      );
+    }
+
+    // Wire up events
+    $('#post').addEventListener('click', postStory);
+    $('#refresh').addEventListener('click', refreshStories);
+    $('#use-gps').addEventListener('click', getGPS);
+
+    // Try to prefill coords from browser on first load
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => setCoords(pos.coords.latitude, pos.coords.longitude),
+        () => {},
+        { maximumAge: 600000 }
+      );
+    }
+  </script>
+</body>
+</html>
