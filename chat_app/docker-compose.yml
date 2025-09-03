@@ -6,12 +6,11 @@ services:
       - "8000:8000"
     depends_on:
       - rabbitmq
-      # - db
+      - db
+      - redis
     environment:
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_PORT=5672
-    networks:
-      - app_network
     restart: always
     volumes:
       - .:/code/app
@@ -23,8 +22,6 @@ services:
       - "15672:15672"
       - "5672:5672"
     hostname: rabbitmq
-    networks:
-      - app_network
     restart: always
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
@@ -33,13 +30,20 @@ services:
       retries: 5         # how many failures before unhealthy
       start_period: 10s  # grace period before starting checks
 
-  # db:
-  #   container_name: "chat-mongo"
-  #   image: "mongo:6.0"
-  #   ports:
-  #     - "27017:27017"
+  redis:
+    container_name: "chat_redis"
+    image: "redis:latest"
+    ports:
+      - "6379:6379"
+    
+  db:
+    container_name: "chat-mongo"
+    image: "mongo:latest"
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
 
-networks:
-  app_network:
-    driver: bridge
-  
+
+volumes:
+  mongo_data:

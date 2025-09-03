@@ -263,6 +263,11 @@
             display: flex;
         }
 
+        .reaction-button{
+            border: none;
+            
+        }
+
         .reaction-option {
             font-size: 1.2rem;
             margin: 0 5px;
@@ -365,7 +370,7 @@
                 <h1>Scalable Chat Room</h1>
                 <p>Chat with just your username - reactions supported</p>
                 <div class="online-count">
-                    <i class="fas fa-users"></i> <span id="onlineCount">143</span> online
+                    <i class="fas fa-users"></i> <span id="onlineCount"></span> online
                 </div>
             </div>
 
@@ -398,7 +403,7 @@
 
                 <div class="chat-main">
                     <div class="messages-container" id="messagesContainer"></div>
-                        
+
                     <div class="input-area">
                         <div class="reaction-picker">
                             <div class="reaction-option">👍</div>
@@ -418,8 +423,6 @@
     </div>
 
     <script>
-
-
 
         document.addEventListener('DOMContentLoaded', function () {
             const messagesContainer = document.getElementById('messagesContainer');
@@ -442,10 +445,6 @@
 
                 switch (data.type) {
                     case "user_joined":
-                        // increment online user count
-                        const onlineCountElem = document.getElementById("onlineCount");
-                        let currentCount = parseInt(onlineCountElem.textContent);
-                        onlineCountElem.textContent = currentCount + 1;
 
                         const messagesContainer = document.getElementById('messagesContainer');
                         const notificationDiv = document.createElement('div');
@@ -460,13 +459,25 @@
                         let currentCount2 = parseInt(onlineCountElem2.textContent);
                         onlineCountElem2.textContent = currentCount2 - 1;
                         break;
+
                     case "message":
-                        data.from_self ? addMessage('YOU', data.message, true) : addMessage(data.username, data.message, false)
+                        console.log("This iwas called")
+                        data.from_self ? loadMessage('YOU', data.message, data.timestamp, true) : loadMessage(data.username, data.message, data.timestamp, false)
                         break;
+
+                    case "active_users_update":
+                        const countElem = document.getElementById("onlineCount");
+                        let count = parseInt(countElem.textContent);
+                        countElem.textContent = data.active_users;
+                        break
 
                     case "react":
                         break;
 
+                    case "history":
+                        data.messages.forEach(message => {
+                            loadMessage(message.username, message.message, message.timestamp, false)
+                        })
 
                     default:
                         break;
@@ -475,35 +486,43 @@
             });
 
             // Function to add a new message
-            function addMessage(sender, content, isSelf = false) {
+            function loadMessage(sender, content, timestamp, isSelf = false) {
                 const messageDiv = document.createElement('div');
                 messageDiv.className = isSelf ? 'message self' : 'message';
 
-                const now = new Date();
-                const timeString = now.getHours() + ':' + String(now.getMinutes()).padStart(2, '0');
+                // Use the actual timestamp if provided, otherwise fallback to now
+                const date = timestamp ? new Date(timestamp) : new Date();
+                const timeString = date.getHours() + ':' + String(date.getMinutes()).padStart(2, '0');
 
                 messageDiv.innerHTML = `
                     <div class="message-header">
                         <span class="message-sender">${isSelf ? 'You' : sender}</span>
                         <span class="message-time">${timeString}</span>
                     </div>
-                    <div class="message-content">
-                        ${content}
-                    </div>
+                    <div class="message-content">${content}</div>
                     <div class="reactions"></div>
                 `;
 
                 messagesContainer.appendChild(messageDiv);
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
-                // Add reaction functionality to the new message
+                // Add reaction functionality (render inline options)
                 const reactionsDiv = messageDiv.querySelector('.reactions');
-                reactionOptions.forEach(option => {
-                    option.addEventListener('click', function () {
-                        addReaction(reactionsDiv, option.textContent);
+
+                // Example set of emojis
+                const emojis = ['👍', '❤️', '😂', '🔥', '😮'];
+
+                emojis.forEach(emoji => {
+                    const button = document.createElement('button');
+                    button.className = 'reaction-button';
+                    button.textContent = emoji;
+                    button.addEventListener('click', () => {
+                        addReaction(reactionsDiv, emoji);
                     });
+                    reactionsDiv.appendChild(button);
                 });
             }
+
 
             // Function to add a reaction
             function addReaction(reactionsDiv, reaction) {
@@ -540,22 +559,8 @@
             // Send message on button click
             sendButton.addEventListener('click', function () {
                 if (messageInput.value.trim() !== '') {
-                    // addMessage('You', messageInput.value, true);
                     socket.send(JSON.stringify({ type: 'message', "username": window.myUsername, message: messageInput.value }));
                     messageInput.value = '';
-
-                    // // Simulate a response after a short delay
-                    // setTimeout(() => {
-                    //     const responses = [
-                    //         "Interesting point!",
-                    //         "I agree with that.",
-                    //         "Can you tell me more?",
-                    //         "Thanks for sharing!",
-                    //         "That's awesome! 🚀"
-                    //     ];
-                    //     const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-                    //     addMessage('Other_User', randomResponse);
-                    // }, 1000);
                 }
             });
 
@@ -582,7 +587,7 @@
                     // Here you would normally send the username to the server
                     document.querySelector('.loginform').style.display = 'none';
                     document.querySelector('.container').style.display = 'flex';
-                    
+
                     window.myUsername = username; // Store username globally
 
                     // Notify server of new user
@@ -590,14 +595,6 @@
                 }
             });
 
-            // // Initialize with some demo messages
-            // setTimeout(() => {
-            //     addMessage('demo_user', 'This chat room is looking great! How are you handling scaling?');
-            // }, 1500);
-
-            // setTimeout(() => {
-            //     addMessage('another_user', 'WebSockets with load balancing?', false);
-            // }, 3000);
         });
     </script>
 </body>
